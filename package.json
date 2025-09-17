@@ -1,0 +1,38 @@
+{
+  "name": "truck-management-starter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@shadcn/ui": "^0.0.4",
+    "@uploadthing/react": "^6.8.0",
+    "autoprefixer": "^10.4.20",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.12",
+    "googleapis": "^159.0.0",
+    "lucide-react": "^0.542.0",
+    "mongodb": "^6.19.0",
+    "mongoos": "^0.0.1-security",
+    "mongoose": "^8.18.1",
+    "next": "15.5.2",
+    "postcss": "^8.4.38",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-hook-form": "^7.52.0",
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^3.4.13",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "eslint": "8.57.1"
+  }
+}

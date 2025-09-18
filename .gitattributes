@@ -6,3 +6,13 @@ for filter=lfs diff=lfs merge=lfs -text
 big filter=lfs diff=lfs merge=lfs -text
 files filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+public/images/*.png filter=lfs diff=lfs merge=lfs -text
+public/images/*.jpg filter=lfs diff=lfs merge=lfs -text
+public/images/*.jpeg filter=lfs diff=lfs merge=lfs -text
+public/images/*.gif filter=lfs diff=lfs merge=lfs -text
+add filter=lfs diff=lfs merge=lfs -text
+videos filter=lfs diff=lfs merge=lfs -text
+public/images/*.mp4 filter=lfs diff=lfs merge=lfs -text
+if filter=lfs diff=lfs merge=lfs -text
+you filter=lfs diff=lfs merge=lfs -text
+ever filter=lfs diff=lfs merge=lfs -text

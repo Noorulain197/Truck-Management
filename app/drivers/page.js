@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -15,7 +15,7 @@ export default function DriversPage() {
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
-    licenseNumber: "",
+    license_no: "", // ✅ FIXED
   });
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function DriversPage() {
     try {
       const res = await axios.post("/api/drivers", form);
       setDrivers((prev) => [...prev, res.data]);
-      setForm({ full_name: "", phone: "", licenseNumber: "" });
+      setForm({ full_name: "", phone: "", license_no: "" }); // ✅ FIXED
       setShowForm(false);
     } catch (err) {
       console.error("Error saving driver:", err);
@@ -152,9 +152,9 @@ export default function DriversPage() {
                 <label className="block text-sm font-medium">License No.</label>
                 <input
                   type="text"
-                  value={form.licenseNumber}
+                  value={form.license_no} // ✅ FIXED
                   onChange={(e) =>
-                    setForm({ ...form, licenseNumber: e.target.value })
+                    setForm({ ...form, license_no: e.target.value }) // ✅ FIXED
                   }
                   className="w-full border px-3 py-2 rounded-lg"
                   placeholder="e.g., LHR-12345"

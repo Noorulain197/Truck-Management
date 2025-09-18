@@ -9,11 +9,7 @@ export async function GET() {
     const drivers = await Driver.find().lean();
     return NextResponse.json(drivers, { status: 200 });
   } catch (err) {
-    console.error("❌ GET /api/drivers error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch drivers", details: err.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
@@ -22,7 +18,6 @@ export async function POST(req) {
   try {
     await connectDB();
     const body = await req.json();
-    console.log("📩 Incoming body:", body);
 
     if (!body.full_name || !body.phone || !body.license_no) {
       return NextResponse.json(
@@ -32,22 +27,11 @@ export async function POST(req) {
     }
 
     const driver = await Driver.create(body);
-    console.log("✅ Driver created:", driver);
-
     return NextResponse.json(driver, { status: 201 });
   } catch (err) {
-    console.error("❌ POST /api/drivers error:", err);
-
     if (err.code === 11000) {
-      return NextResponse.json(
-        { error: "Duplicate entry: driver already exists" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Duplicate driver" }, { status: 400 });
     }
-
-    return NextResponse.json(
-      { error: "Failed to create driver", details: err.message, stack: err.stack },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

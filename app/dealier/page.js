@@ -9,6 +9,7 @@ export default function DealersPage() {
   const [loading, setLoading] = useState(true);
   const [showPrompt, setShowPrompt] = useState(false);
   const [form, setForm] = useState({ name: "" });
+  const [editingDealer, setEditingDealer] = useState(null); // ✅ for edit
 
   useEffect(() => {
     async function fetchData() {
@@ -41,13 +42,42 @@ export default function DealersPage() {
   async function handleSave(e) {
     e.preventDefault();
     try {
-      const res = await axios.post("/api/dealers", form);
-      setDealers([...dealers, res.data]);
+      if (editingDealer) {
+        // ✅ Edit existing dealer
+        const res = await axios.put(`/api/dealers/${editingDealer._id}`, form);
+        setDealers((prev) =>
+          prev.map((d) => (d._id === editingDealer._id ? res.data : d))
+        );
+      } else {
+        // ✅ Add new dealer
+        const res = await axios.post("/api/dealers", form);
+        setDealers([...dealers, res.data]);
+      }
       setShowPrompt(false);
+      setEditingDealer(null);
       setForm({ name: "" });
     } catch (err) {
-      console.error("Error adding dealer:", err);
+      console.error("Error saving dealer:", err);
     }
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Are you sure you want to delete this dealer?")) return;
+
+    try {
+      await axios.delete(`/api/dealers/${id}`);
+      setDealers((prev) => prev.filter((d) => d._id !== id));
+
+    } catch (err) {
+      console.error("Error deleting dealer:", err);
+    }
+  }
+
+
+  function handleEdit(dealer) {
+    setEditingDealer(dealer);
+    setForm({ name: dealer.name });
+    setShowPrompt(true);
   }
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
@@ -56,7 +86,6 @@ export default function DealersPage() {
     <div className="p-6 bg-white min-h-screen">
       <h1 className="text-2xl font-bold mb-4 text-orange-600">Dealers</h1>
 
-      {/* ✅ Button ab heading ke neeche */}
       <button
         onClick={() => setShowPrompt(true)}
         className="mb-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
@@ -68,7 +97,7 @@ export default function DealersPage() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white p-6 rounded-xl shadow-lg w-96">
             <h2 className="text-lg font-semibold mb-4 text-orange-600">
-              Add New Dealer
+              {editingDealer ? "Edit Dealer" : "Add New Dealer"}
             </h2>
             <form onSubmit={handleSave}>
               <input
@@ -83,7 +112,11 @@ export default function DealersPage() {
                 <button
                   type="button"
                   className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
-                  onClick={() => setShowPrompt(false)}
+                  onClick={() => {
+                    setShowPrompt(false);
+                    setEditingDealer(null);
+                    setForm({ name: "" });
+                  }}
                 >
                   Cancel
                 </button>
@@ -91,7 +124,7 @@ export default function DealersPage() {
                   type="submit"
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                 >
-                  Save
+                  {editingDealer ? "Update" : "Save"}
                 </button>
               </div>
             </form>
@@ -99,7 +132,6 @@ export default function DealersPage() {
         </div>
       )}
 
-      {/* ✅ Dealer Table */}
       <div className="overflow-x-auto shadow-md rounded-lg">
         <table className="min-w-full border border-gray-300 rounded-lg overflow-hidden">
           <thead className="bg-blue-900 text-white">
@@ -108,6 +140,7 @@ export default function DealersPage() {
               <th className="px-4 py-2 border">Total Sale</th>
               <th className="px-4 py-2 border">Paid</th>
               <th className="px-4 py-2 border">Amount Left</th>
+              <th className="px-4 py-2 border">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -119,6 +152,21 @@ export default function DealersPage() {
                   <td className="border px-4 py-2">{totalSale}</td>
                   <td className="border px-4 py-2">{amountPaid}</td>
                   <td className="border px-4 py-2">{amountLeft}</td>
+                  <td className="border px-4 py-2 flex justify-center gap-2">
+                    <button
+                      onClick={() => handleEdit(dealer)}
+                      className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(dealer._id)}
+                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+
+                  </td>
                 </tr>
               );
             })}

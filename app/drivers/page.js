@@ -7,15 +7,15 @@ export default function DriversPage() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // manual payment state
-  const [payments, setPayments] = useState({}); // { driverId: amountPaid }
+  const [payments, setPayments] = useState({}); // manual payments
 
-  // add driver modal state
+  // form modal state
   const [showForm, setShowForm] = useState(false);
+  const [editingDriver, setEditingDriver] = useState(null); // track edit mode
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
-    license_no: "", // ✅ FIXED
+    license_no: "",
   });
 
   useEffect(() => {
@@ -37,7 +37,6 @@ export default function DriversPage() {
     }
   }
 
-  // helper: calculate total commission per driver from trips
   const calculateCommission = (driverId) => {
     return trips
       .filter((t) => t.driver?._id === driverId)
@@ -51,16 +50,51 @@ export default function DriversPage() {
     }));
   };
 
-  // save driver
+  // open modal for add / edit
+  const openForm = (driver = null) => {
+    if (driver) {
+      setEditingDriver(driver);
+      setForm({
+        full_name: driver.full_name,
+        phone: driver.phone,
+        license_no: driver.license_no,
+      });
+    } else {
+      setEditingDriver(null);
+      setForm({ full_name: "", phone: "", license_no: "" });
+    }
+    setShowForm(true);
+  };
+
+  // save / update driver
   async function handleSaveDriver(e) {
     e.preventDefault();
     try {
-      const res = await axios.post("/api/drivers", form);
-      setDrivers((prev) => [...prev, res.data]);
-      setForm({ full_name: "", phone: "", license_no: "" }); // ✅ FIXED
+      if (editingDriver) {
+        const res = await axios.put(`/api/drivers/${editingDriver._id}`, form);
+        setDrivers((prev) =>
+          prev.map((d) => (d._id === editingDriver._id ? res.data : d))
+        );
+      } else {
+        const res = await axios.post("/api/drivers", form);
+        setDrivers((prev) => [...prev, res.data]);
+      }
+      setForm({ full_name: "", phone: "", license_no: "" });
+      setEditingDriver(null);
       setShowForm(false);
     } catch (err) {
       console.error("Error saving driver:", err);
+    }
+  }
+
+  // delete driver
+  async function handleDeleteDriver(id) {
+    if (!confirm("Are you sure you want to delete this driver?")) return;
+    try {
+      await axios.delete(`/api/drivers/${id}`);
+      setDrivers((prev) => prev.filter((d) => d._id !== id));
+    } catch (err) {
+      console.error("Error deleting driver:", err);
     }
   }
 
@@ -68,9 +102,8 @@ export default function DriversPage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Drivers</h1>
 
-      {/* ✅ Add Driver Button */}
       <button
-        onClick={() => setShowForm(true)}
+        onClick={() => openForm()}
         className="mb-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
       >
         + Add Driver
@@ -86,6 +119,7 @@ export default function DriversPage() {
               <th className="border px-4 py-2">Total Commission</th>
               <th className="border px-4 py-2">Amount Paid</th>
               <th className="border px-4 py-2">Pending Amount</th>
+              <th className="border px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -110,6 +144,20 @@ export default function DriversPage() {
                     />
                   </td>
                   <td className="border px-4 py-2">Rs {pending}</td>
+                  <td className="border px-4 py-2 flex gap-2 justify-center">
+                    <button
+                      onClick={() => openForm(d)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDriver(d._id)}
+                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -117,12 +165,12 @@ export default function DriversPage() {
         </table>
       )}
 
-      {/* ✅ Add Driver Modal */}
+      {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
             <h2 className="text-lg font-semibold mb-4 text-orange-600">
-              Add New Driver
+              {editingDriver ? "Edit Driver" : "Add New Driver"}
             </h2>
             <form onSubmit={handleSaveDriver} className="space-y-3">
               <div>
@@ -152,9 +200,9 @@ export default function DriversPage() {
                 <label className="block text-sm font-medium">License No.</label>
                 <input
                   type="text"
-                  value={form.license_no} // ✅ FIXED
+                  value={form.license_no}
                   onChange={(e) =>
-                    setForm({ ...form, license_no: e.target.value }) // ✅ FIXED
+                    setForm({ ...form, license_no: e.target.value })
                   }
                   className="w-full border px-3 py-2 rounded-lg"
                   placeholder="e.g., LHR-12345"
@@ -172,7 +220,7 @@ export default function DriversPage() {
                   type="submit"
                   className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"
                 >
-                  Save
+                  {editingDriver ? "Update" : "Save"}
                 </button>
               </div>
             </form>

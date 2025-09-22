@@ -146,7 +146,7 @@ export default function TripsPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (editingId) {
-      await axios.put(`/api/trip/${editingId}`, form);
+      await axios.put(`/api/trips/${editingId}`, form);
       setEditingId(null);
     } else {
       await axios.post("/api/trips", form);
@@ -156,15 +156,16 @@ export default function TripsPage() {
       truck: "",
       dealer: "",
       date: "",
-      total_sale: "",
-      amount_received: "",
-      amount_pending: "",
-      expenses: "",
-      fuel_cost: "",
-      other_expenses: "",
-      kilometres: "",
-      total_income: "",
+      total_sale: 0,
+      amount_received: 0,
+      amount_pending: 0,
+      expenses: 0,
+      fuel_cost: 0,
+      other_expenses: 0,
+      kilometres: 0,
+      total_income: 0,
     });
+
     fetchTrips();
   };
 

@@ -16,15 +16,16 @@ export async function POST(req) {
         : Number(body.total_sale || 0) - Number(body.amount_received || 0);
 
     // 🧮 calculate total income
+    // ✅ Correct
     const total_income =
-      Number(body.amount_received || 0) -
+      Number(body.total_sale || 0) -
       (Number(body.expenses || 0) +
         Number(body.fuel_cost || 0) +
         Number(body.other_expenses || 0));
 
-    // 🧮 calculate commission + company profit
     const driverCommission = total_income * 0.1;
     const companyProfit = total_income - driverCommission;
+
 
     const tripDoc = await Trip.create({
       driver: body.driver,
@@ -69,9 +70,9 @@ export async function GET() {
   try {
     await connectDB();
     const trips = await Trip.find()
-      .populate("driver", "name")  // ✅ only fetch name
-      .populate("truck", "number") // ✅ only fetch number
-      .populate("dealer", "name"); // ✅ only fetch name
+      .populate("driver", "full_name")   // ✅ Driver ka full_name
+      .populate("truck", "number model") // ✅ Truck ka number + model dono
+      .populate("dealer", "name");       // ✅ Dealer ka name
 
     return NextResponse.json(trips, { status: 200 });
   } catch (err) {
@@ -79,3 +80,4 @@ export async function GET() {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

@@ -382,9 +382,12 @@ export default function TripsPage() {
                 <td className="p-2 border">{trip.total_income}</td>
                 <td className="p-2 border">{trip.driverCommission}</td>
                 <td className="p-2 border">{trip.kilometres}</td>
-                <td className="p-2 border">{trip.truck?.number || "-"}</td>
-                <td className="p-2 border">{trip.driver?.name || "-"}</td>
+
+                {/* 🔥 Fix: number → model */}
+                <td className="p-2 border">{trip.truck?.model || "-"}</td>
+                <td className="p-2 border">{trip.driver?.full_name || "-"}</td>
                 <td className="p-2 border">{trip.dealer?.name || "-"}</td>
+
                 <td className="p-2 border">
                   <button
                     onClick={() => handleEdit(trip)}
@@ -402,6 +405,7 @@ export default function TripsPage() {
               </tr>
             ))}
           </tbody>
+
         </table>
       </div>
     </div>

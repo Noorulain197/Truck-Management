@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "../../../lib/mongodb";
 import Truck from "../../../lib/models/Truck";
 
+// GET all trucks
 export async function GET() {
   try {
     await connectDB();
@@ -13,11 +14,15 @@ export async function GET() {
   }
 }
 
+// POST create truck
 export async function POST(req) {
   try {
     await connectDB();
     const body = await req.json();
+
+    // 🔑 Include "number" because it's required in schema
     const truck = await Truck.create({
+      number: body.number,   // 👈 ab ye required hai
       model: body.model,
       capacity: body.capacity,
       status: body.status || "active",
@@ -25,6 +30,8 @@ export async function POST(req) {
       lastOilChangeAt: body.lastOilChangeAt || 0,
       lastTyreChangeAt: body.lastTyreChangeAt || 0,
     });
+
+
     return NextResponse.json(truck);
   } catch (err) {
     console.error("POST /api/trucks error:", err);

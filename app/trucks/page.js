@@ -12,6 +12,7 @@ export default function TrucksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTruck, setEditingTruck] = useState(null); // 🚀 null = add mode
   const [form, setForm] = useState({
+    number: "",
     model: "",
     capacity: "",
     currentMileage: "",
@@ -59,7 +60,7 @@ export default function TrucksPage() {
         setTrucks((prev) => [...prev, res.data]);
       }
 
-      setForm({ model: "", capacity: "", currentMileage: "" });
+      setForm({ number: "", model: "", capacity: "", currentMileage: "" });
       setEditingTruck(null);
       setShowForm(false);
     } catch (err) {
@@ -82,9 +83,10 @@ export default function TrucksPage() {
   function handleEdit(truck) {
     setEditingTruck(truck);
     setForm({
-      model: truck.model,
-      capacity: truck.capacity,
-      currentMileage: truck.currentMileage,
+      number: truck.number || "",
+      model: truck.model || "",
+      capacity: truck.capacity ?? "",
+      currentMileage: truck.currentMileage ?? "",
     });
     setShowForm(true);
   }
@@ -98,7 +100,7 @@ export default function TrucksPage() {
         <button
           onClick={() => {
             setEditingTruck(null);
-            setForm({ model: "", capacity: "", currentMileage: "" });
+            setForm({ number: "", model: "", capacity: "", currentMileage: "" });
             setShowForm(true);
           }}
           className="bg-orange-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-900 transition"
@@ -112,6 +114,7 @@ export default function TrucksPage() {
         <table className="min-w-full border border-gray-300 rounded-lg overflow-hidden text-sm md:text-base">
           <thead className="bg-gray-200">
             <tr>
+              <th className="px-4 py-2 border">Truck Number</th>
               <th className="px-4 py-2 border">Truck Model</th>
               <th className="px-4 py-2 border">Capacity</th>
               <th className="px-4 py-2 border">Truckwise Income</th>
@@ -121,6 +124,7 @@ export default function TrucksPage() {
           <tbody>
             {trucks.map((truck) => (
               <tr key={truck._id} className="text-center">
+                <td className="border px-4 py-2">{truck.number || "N/A"}</td>
                 <td className="border px-4 py-2">{truck.model || "N/A"}</td>
                 <td className="border px-4 py-2">{truck.capacity || 0}</td>
                 <td className="border px-4 py-2">
@@ -155,11 +159,23 @@ export default function TrucksPage() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
+                <label className="block text-sm font-medium">Truck Number</label>
+                <input
+                  type="text"
+                  required
+                  value={form.number || ""}
+                  onChange={(e) => setForm({ ...form, number: e.target.value })}
+                  className="w-full border px-3 py-2 rounded-lg"
+                  placeholder="e.g., LHR-1234"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium">Model</label>
                 <input
                   type="text"
                   required
-                  value={form.model}
+                  value={form.model || ""}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
                   className="w-full border px-3 py-2 rounded-lg"
                   placeholder="e.g., Volvo FH16"
@@ -172,7 +188,7 @@ export default function TrucksPage() {
                 </label>
                 <input
                   type="number"
-                  value={form.capacity}
+                  value={form.capacity || ""}
                   onChange={(e) =>
                     setForm({ ...form, capacity: e.target.value })
                   }
@@ -187,7 +203,7 @@ export default function TrucksPage() {
                 </label>
                 <input
                   type="number"
-                  value={form.currentMileage}
+                  value={form.currentMileage || ""}
                   onChange={(e) =>
                     setForm({ ...form, currentMileage: e.target.value })
                   }

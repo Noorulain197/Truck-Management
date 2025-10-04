@@ -17,6 +17,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
     "googleapis": "^159.0.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.542.0",
     "mongodb": "^6.19.0",
     "mongoos": "^0.0.1-security",

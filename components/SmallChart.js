@@ -18,7 +18,7 @@ export default function SmallChart() {
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="value" stroke="var(--orange)" strokeWidth={2} />
+          <Line type="monotone" dataKey="value" stroke="var(--white)" strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>
     </div>

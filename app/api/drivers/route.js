@@ -2,18 +2,22 @@ import { NextResponse } from "next/server";
 import { connectDB } from "../../../lib/mongodb";
 import Driver from "../../../lib/models/Driver";
 
-// GET /api/drivers
+// 🔹 GET all drivers
 export async function GET() {
   try {
     await connectDB();
     const drivers = await Driver.find().lean();
-    return NextResponse.json(drivers, { status: 200 });
+    return NextResponse.json({ success: true, data: drivers }, { status: 200 });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("GET /api/drivers error:", err);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch drivers", error: err.message },
+      { status: 500 }
+    );
   }
 }
 
-// POST /api/drivers
+// 🔹 POST create driver
 export async function POST(req) {
   try {
     await connectDB();
@@ -21,17 +25,30 @@ export async function POST(req) {
 
     if (!body.full_name || !body.phone || !body.license_no) {
       return NextResponse.json(
-        { error: "Full name, phone, and license number are required" },
+        {
+          success: false,
+          message: "Full name, phone, and license number are required",
+        },
         { status: 400 }
       );
     }
 
     const driver = await Driver.create(body);
-    return NextResponse.json(driver, { status: 201 });
+    return NextResponse.json(
+      { success: true, message: "Driver created successfully", data: driver },
+      { status: 201 }
+    );
   } catch (err) {
+    console.error("POST /api/drivers error:", err);
     if (err.code === 11000) {
-      return NextResponse.json({ error: "Duplicate driver" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Duplicate driver entry" },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to create driver", error: err.message },
+      { status: 500 }
+    );
   }
 }

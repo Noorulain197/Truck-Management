@@ -4,19 +4,32 @@ import { connectDB } from "@/lib/mongodb";
 import Trip from "@/lib/models/Trip";
 import Dealer from "@/lib/models/Dealer";
 
+// 🔹 POST create trip
 export async function POST(req) {
   try {
     await connectDB();
     const body = await req.json();
 
-    // 🧮 calculate pending (auto if not given)
+    const { driver, truck, dealer, pickup_city, dropoff_city, date } = body;
+
+    if (!driver || !mongoose.Types.ObjectId.isValid(driver)) {
+      return NextResponse.json(
+        { success: false, message: "Valid driver ID is required" },
+        { status: 400 }
+      );
+    }
+    if (!truck || !mongoose.Types.ObjectId.isValid(truck)) {
+      return NextResponse.json(
+        { success: false, message: "Valid truck ID is required" },
+        { status: 400 }
+      );
+    }
+
     const amount_pending =
       body.amount_pending !== undefined
         ? Number(body.amount_pending)
         : Number(body.total_sale || 0) - Number(body.amount_received || 0);
 
-    // 🧮 calculate total income
-    // ✅ Correct
     const total_income =
       Number(body.total_sale || 0) -
       (Number(body.expenses || 0) +
@@ -26,14 +39,13 @@ export async function POST(req) {
     const driverCommission = total_income * 0.1;
     const companyProfit = total_income - driverCommission;
 
-
     const tripDoc = await Trip.create({
-      driver: body.driver,
-      truck: body.truck,
-      dealer: body.dealer || null,
-      pickup_city: body.pickup_city || "",
-      dropoff_city: body.dropoff_city || "",
-      date: body.date ? new Date(body.date) : new Date(),
+      driver,
+      truck,
+      dealer: dealer || null,
+      pickup_city: pickup_city || "",
+      dropoff_city: dropoff_city || "",
+      date: date ? new Date(date) : new Date(),
 
       total_sale: Number(body.total_sale || 0),
       amount_received: Number(body.amount_received || 0),
@@ -48,9 +60,8 @@ export async function POST(req) {
       kilometres: Number(body.kilometres || 0),
     });
 
-    // 📊 update Dealer aggregates if dealer exists
-    if (body.dealer && mongoose.Types.ObjectId.isValid(body.dealer)) {
-      await Dealer.findByIdAndUpdate(body.dealer, {
+    if (dealer && mongoose.Types.ObjectId.isValid(dealer)) {
+      await Dealer.findByIdAndUpdate(dealer, {
         $inc: {
           totalTrips: 1,
           totalBusiness: Number(body.total_sale || 0),
@@ -59,25 +70,34 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json(tripDoc, { status: 201 });
+    return NextResponse.json(
+      { success: true, message: "Trip created successfully", data: tripDoc },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("❌ Error creating trip:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to create trip", error: err.message },
+      { status: 500 }
+    );
   }
 }
 
+// 🔹 GET all trips
 export async function GET() {
   try {
     await connectDB();
     const trips = await Trip.find()
-      .populate("driver", "full_name")   // ✅ Driver ka full_name
-      .populate("truck", "number model") // ✅ Truck ka number + model dono
-      .populate("dealer", "name");       // ✅ Dealer ka name
+      .populate("driver", "full_name")
+      .populate("truck", "number model")
+      .populate("dealer", "name");
 
-    return NextResponse.json(trips, { status: 200 });
+    return NextResponse.json({ success: true, data: trips }, { status: 200 });
   } catch (err) {
     console.error("❌ Error fetching trips:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch trips", error: err.message },
+      { status: 500 }
+    );
   }
 }
-

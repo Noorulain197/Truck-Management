@@ -18,10 +18,14 @@ export default function DealersPage() {
           axios.get("/api/dealers"),
           axios.get("/api/trips"),
         ]);
-        setDealers(dealerRes.data);
-        setTrips(tripRes.data);
+        // ✅ Safe array setting
+        setDealers(Array.isArray(dealerRes.data) ? dealerRes.data : []);
+        setTrips(Array.isArray(tripRes.data) ? tripRes.data : []);
       } catch (err) {
         console.error("Error fetching dealers or trips:", err);
+        // ✅ Set empty arrays on error
+        setDealers([]);
+        setTrips([]);
       } finally {
         setLoading(false);
       }
@@ -30,6 +34,10 @@ export default function DealersPage() {
   }, []);
 
   function calculateDealerData(dealerId) {
+    // ✅ Safe check for trips array
+    if (!Array.isArray(trips)) {
+      return { totalSale: 0, amountPaid: 0, amountLeft: 0 };
+    }
     const dealerTrips = trips.filter((t) => t.dealer?._id === dealerId);
 
     const totalSale = dealerTrips.reduce((sum, t) => sum + (t.total_sale || 0), 0);
@@ -46,12 +54,12 @@ export default function DealersPage() {
         // ✅ Edit existing dealer
         const res = await axios.put(`/api/dealers/${editingDealer._id}`, form);
         setDealers((prev) =>
-          prev.map((d) => (d._id === editingDealer._id ? res.data : d))
+          Array.isArray(prev) ? prev.map((d) => (d._id === editingDealer._id ? res.data : d)) : []
         );
       } else {
         // ✅ Add new dealer
         const res = await axios.post("/api/dealers", form);
-        setDealers([...dealers, res.data]);
+        setDealers((prev) => [...(Array.isArray(prev) ? prev : []), res.data]);
       }
       setShowPrompt(false);
       setEditingDealer(null);
@@ -66,13 +74,11 @@ export default function DealersPage() {
 
     try {
       await axios.delete(`/api/dealers/${id}`);
-      setDealers((prev) => prev.filter((d) => d._id !== id));
-
+      setDealers((prev) => Array.isArray(prev) ? prev.filter((d) => d._id !== id) : []);
     } catch (err) {
       console.error("Error deleting dealer:", err);
     }
   }
-
 
   function handleEdit(dealer) {
     setEditingDealer(dealer);
@@ -83,27 +89,38 @@ export default function DealersPage() {
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
-    <div className="p-6 bg-white min-h-screen">
-      <h1 className="text-2xl font-bold mb-4 text-orange-600">Dealers</h1>
+    <div className="p-4 sm:p-6 mt-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dealers</h1>
+          <p className="text-sm text-gray-500">
+            Manage your dealers, track payments, and view outstanding balances.
+          </p>
+        </div>
 
-      <button
-        onClick={() => setShowPrompt(true)}
-        className="mb-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-      >
-        + Add Dealer
-      </button>
+        <div>
+          <button
+            onClick={() => setShowPrompt(true)}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm rounded-md transition-all"
+          >
+            + Add Dealer
+          </button>
+        </div>
+      </div>
 
+      {/* Add/Edit Dealer Modal */}
       {showPrompt && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-96">
-            <h2 className="text-lg font-semibold mb-4 text-orange-600">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white p-6 rounded-2xl shadow-lg w-80 sm:w-96 border">
+            <h2 className="text-lg font-semibold mb-4 text-gray-800">
               {editingDealer ? "Edit Dealer" : "Add New Dealer"}
             </h2>
             <form onSubmit={handleSave}>
               <input
                 type="text"
                 placeholder="Dealer Name"
-                className="border p-2 w-full mb-4 rounded-lg focus:ring-2 focus:ring-orange-500"
+                className="border p-2 w-full mb-4 rounded-md focus:ring-2 focus:ring-blue-600 outline-none text-sm"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
@@ -111,7 +128,7 @@ export default function DealersPage() {
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
+                  className="px-4 py-2 bg-gray-300 text-gray-800 text-sm rounded-md hover:bg-gray-400 transition-all"
                   onClick={() => {
                     setShowPrompt(false);
                     setEditingDealer(null);
@@ -122,7 +139,7 @@ export default function DealersPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  className="px-4 py-2 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-800 transition-all"
                 >
                   {editingDealer ? "Update" : "Save"}
                 </button>
@@ -132,40 +149,42 @@ export default function DealersPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto shadow-md rounded-lg">
-        <table className="min-w-full border border-gray-300 rounded-lg overflow-hidden">
-          <thead className="bg-blue-900 text-white">
+      {/* Dealers Table */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-100 text-gray-700">
             <tr>
-              <th className="px-4 py-2 border">Dealer Name</th>
-              <th className="px-4 py-2 border">Total Sale</th>
-              <th className="px-4 py-2 border">Paid</th>
-              <th className="px-4 py-2 border">Amount Left</th>
-              <th className="px-4 py-2 border">Actions</th>
+              <th className="p-2 border">Dealer Name</th>
+              <th className="p-2 border">Total Sale</th>
+              <th className="p-2 border">Paid</th>
+              <th className="p-2 border">Amount Left</th>
+              <th className="p-2 border">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {dealers.map((dealer) => {
+            {Array.isArray(dealers) && dealers.map((dealer) => {
               const { totalSale, amountPaid, amountLeft } = calculateDealerData(dealer._id);
               return (
-                <tr key={dealer._id} className="text-center">
-                  <td className="border px-4 py-2">{dealer.name}</td>
-                  <td className="border px-4 py-2">{totalSale}</td>
-                  <td className="border px-4 py-2">{amountPaid}</td>
-                  <td className="border px-4 py-2">{amountLeft}</td>
-                  <td className="border px-4 py-2 flex justify-center gap-2">
-                    <button
-                      onClick={() => handleEdit(dealer)}
-                      className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(dealer._id)}
-                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-
+                <tr key={dealer._id} className="text-center hover:bg-gray-50">
+                  <td className="p-2 border">{dealer.name}</td>
+                  <td className="p-2 border">{totalSale}</td>
+                  <td className="p-2 border">{amountPaid}</td>
+                  <td className="p-2 border">{amountLeft}</td>
+                  <td className="p-2 border">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleEdit(dealer)}
+                        className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-all"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(dealer._id)}
+                        className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-all"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -173,6 +192,13 @@ export default function DealersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Empty State */}
+      {dealers.length === 0 && (
+        <div className="p-6 text-center text-gray-500">
+          No dealers found — add your first one above.
+        </div>
+      )}
     </div>
   );
 }

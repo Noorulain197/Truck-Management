@@ -9,14 +9,14 @@ function isValidId(id) {
 }
 
 // GET single truck
-export async function GET(req, { params }) {
-  const { id } = params;
-
-  if (!isValidId(id)) {
-    return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
-  }
-
+export async function GET(request) {
   try {
+    const id = request.url.split('/').pop();
+    
+    if (!isValidId(id)) {
+      return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
+    }
+
     await connectDB();
     const truck = await Truck.findById(id);
 
@@ -32,16 +32,16 @@ export async function GET(req, { params }) {
 }
 
 // PUT: update truck
-export async function PUT(req, { params }) {
-  const { id } = params;
-
-  if (!isValidId(id)) {
-    return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
-  }
-
+export async function PUT(request) {
   try {
+    const id = request.url.split('/').pop();
+
+    if (!isValidId(id)) {
+      return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
+    }
+
     await connectDB();
-    const body = await req.json();
+    const body = await request.json();
 
     const updatedTruck = await Truck.findByIdAndUpdate(id, body, {
       new: true,
@@ -60,14 +60,14 @@ export async function PUT(req, { params }) {
 }
 
 // DELETE: remove truck
-export async function DELETE(req, { params }) {
-  const { id } = params;
-
-  if (!isValidId(id)) {
-    return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
-  }
-
+export async function DELETE(request) {
   try {
+    const id = request.url.split('/').pop();
+
+    if (!isValidId(id)) {
+      return NextResponse.json({ error: "Invalid truck ID" }, { status: 400 });
+    }
+
     await connectDB();
     const deletedTruck = await Truck.findByIdAndDelete(id);
 

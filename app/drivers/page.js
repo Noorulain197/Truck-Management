@@ -28,8 +28,10 @@ export default function DriversPage() {
         axios.get("/api/drivers"),
         axios.get("/api/trips"),
       ]);
-      setDrivers(driversRes.data);
-      setTrips(tripsRes.data);
+
+      setDrivers(driversRes.data.data || []);
+      setTrips(tripsRes.data.data || []);
+
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
@@ -99,82 +101,112 @@ export default function DriversPage() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Drivers</h1>
+    <div className="p-4 sm:p-6 mt-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Drivers
+          </h1>
+          <p className="text-sm text-gray-500">
+            Manage driver records, commissions, and pending payments easily.
+          </p>
+        </div>
 
-      <button
-        onClick={() => openForm()}
-        className="mb-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-      >
-        + Add Driver
-      </button>
+        <button
+          onClick={() => openForm()}
+          className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm rounded-md transition-all"
+        >
+          + Add Driver
+        </button>
+      </div>
 
+      {/* Table / Loader */}
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-center text-gray-500 mt-10">Loading...</p>
       ) : (
-        <table className="min-w-full border border-gray-300 rounded-lg overflow-hidden">
-          <thead className="bg-blue-900 text-white">
-            <tr>
-              <th className="border px-4 py-2">Driver Name</th>
-              <th className="border px-4 py-2">Total Commission</th>
-              <th className="border px-4 py-2">Amount Paid</th>
-              <th className="border px-4 py-2">Pending Amount</th>
-              <th className="border px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {drivers.map((d) => {
-              const totalCommission = calculateCommission(d._id);
-              const amountPaid = payments[d._id] || 0;
-              const pending = totalCommission - amountPaid;
+        <div className="overflow-x-auto bg-white rounded-lg shadow-sm border">
+          <table className="min-w-full text-sm border-collapse">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="border p-2 text-left">Driver Name</th>
+                <th className="border p-2 text-center">Total Commission</th>
+                <th className="border p-2 text-center">Amount Paid</th>
+                <th className="border p-2 text-center">Pending</th>
+                <th className="border p-2 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {drivers.map((d) => {
+                const totalCommission = calculateCommission(d._id);
+                const amountPaid = payments[d._id] || 0;
+                const pending = totalCommission - amountPaid;
 
-              return (
-                <tr key={d._id} className="text-center">
-                  <td className="border px-4 py-2">{d.full_name}</td>
-                  <td className="border px-4 py-2">Rs {totalCommission}</td>
-                  <td className="border px-4 py-2">
-                    <input
-                      type="number"
-                      value={amountPaid}
-                      onChange={(e) =>
-                        handlePaymentChange(d._id, e.target.value)
-                      }
-                      className="w-24 border rounded p-1 text-center"
-                      placeholder="Enter"
-                    />
-                  </td>
-                  <td className="border px-4 py-2">Rs {pending}</td>
-                  <td className="border px-4 py-2 flex gap-2 justify-center">
-                    <button
-                      onClick={() => openForm(d)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDriver(d._id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                return (
+                  <tr
+                    key={d._id}
+                    className="text-center hover:bg-gray-50 transition-all"
+                  >
+                    <td className="border p-2 text-left font-medium text-gray-800">
+                      {d.full_name}
+                    </td>
+                    <td className="border p-2 text-gray-700">
+                      Rs {totalCommission}
+                    </td>
+                    <td className="border p-2">
+                      <input
+                        type="number"
+                        value={amountPaid}
+                        onChange={(e) =>
+                          handlePaymentChange(d._id, e.target.value)
+                        }
+                        className="w-20 sm:w-24 border rounded p-1 text-center focus:ring-2 focus:ring-blue-600"
+                        placeholder="Enter"
+                      />
+                    </td>
+                    <td className="border p-2 text-gray-700">Rs {pending}</td>
+                    <td className="border p-2 flex justify-center gap-2">
+                      <button
+                        onClick={() => openForm(d)}
+                        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs sm:text-sm transition-all"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDriver(d._id)}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs sm:text-sm transition-all"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* No Data */}
+      {!loading && drivers.length === 0 && (
+        <div className="p-6 text-center text-gray-500">
+          No driver records found
+        </div>
       )}
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h2 className="text-lg font-semibold mb-4 text-orange-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 border">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingDriver ? "Edit Driver" : "Add New Driver"}
             </h2>
-            <form onSubmit={handleSaveDriver} className="space-y-3">
+
+            <form onSubmit={handleSaveDriver} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium">Full Name</label>
+                <label className="block text-sm text-gray-700 font-medium mb-1">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
@@ -182,43 +214,52 @@ export default function DriversPage() {
                   onChange={(e) =>
                     setForm({ ...form, full_name: e.target.value })
                   }
-                  className="w-full border px-3 py-2 rounded-lg"
+                  className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-700"
                   placeholder="e.g., Ali Khan"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium">Phone</label>
+                <label className="block text-sm text-gray-700 font-medium mb-1">
+                  Phone
+                </label>
                 <input
                   type="text"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full border px-3 py-2 rounded-lg"
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
+                  className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-700"
                   placeholder="e.g., 0300-1234567"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium">License No.</label>
+                <label className="block text-sm text-gray-700 font-medium mb-1">
+                  License No.
+                </label>
                 <input
                   type="text"
                   value={form.license_no}
                   onChange={(e) =>
                     setForm({ ...form, license_no: e.target.value })
                   }
-                  className="w-full border px-3 py-2 rounded-lg"
+                  className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-700"
                   placeholder="e.g., LHR-12345"
                 />
               </div>
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 border rounded-lg"
+                  className="px-4 py-2 border rounded-md hover:bg-gray-100 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"
+                  className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md transition-all"
                 >
                   {editingDriver ? "Update" : "Save"}
                 </button>
@@ -229,4 +270,7 @@ export default function DriversPage() {
       )}
     </div>
   );
+
+
+
 }

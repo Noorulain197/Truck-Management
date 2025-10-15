@@ -1,20 +1,61 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Trip from "@/lib/models/Trip";
 
-// 🗑 DELETE Trip
-export async function DELETE(req, { params }) {
+// 🔹 GET a single Trip
+export async function GET(req, context) {
+  const { params } = await context;
+  const id = params.id;
+
   try {
     await connectDB();
-    const { id } = params;
 
-    if (!id) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: "Trip ID is required" },
+        { success: false, message: "Valid Trip ID is required" },
         { status: 400 }
       );
     }
 
+    const trip = await Trip.findById(id)
+      .populate("driver", "full_name")
+      .populate("truck", "number model")
+      .populate("dealer", "name");
+
+    if (!trip) {
+      return NextResponse.json(
+        { success: false, message: "Trip not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: trip }, { status: 200 });
+  } catch (err) {
+    console.error("❌ Error fetching trip:", err);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch trip", error: err.message },
+      { status: 500 }
+    );
+  }
+}
+
+// 🔹 DELETE a Trip
+export async function DELETE(req) {
+  try {
+    // Extract ID from URL
+    const url = new URL(req.url);
+    const pathSegments = url.pathname.split('/');
+    const id = pathSegments[pathSegments.length - 1];
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, message: "Valid Trip ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
     const deletedTrip = await Trip.findByIdAndDelete(id);
 
     if (!deletedTrip) {
@@ -37,23 +78,25 @@ export async function DELETE(req, { params }) {
   }
 }
 
-// ✏️ UPDATE Trip
-export async function PUT(req, { params }) {
+// 🔹 UPDATE a Trip
+export async function PUT(req, context) {
+  const { params } = await context;
+  const id = params.id;
+
   try {
     await connectDB();
-    const { id } = params;
     const body = await req.json();
 
-    if (!id) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: "Trip ID is required" },
+        { success: false, message: "Valid Trip ID is required" },
         { status: 400 }
       );
     }
 
     const updatedTrip = await Trip.findByIdAndUpdate(id, body, {
-      new: true,          // return updated doc
-      runValidators: true // validate schema
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedTrip) {

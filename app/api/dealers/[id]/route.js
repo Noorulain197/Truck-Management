@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../../lib/mongodb";
-import Dealer from "../../../../lib/models/Dealer";
+import { connectDB } from "@/lib/mongodb";
+import Dealer from "@/lib/models/Dealer";
 
-export async function PUT(req, { params }) {
+export async function PUT(request) {
   try {
-    await connectDB();
-    const { id } = params;
-    const body = await req.json();
-
+    const id = request.url.split('/').pop();
+    
     if (!id) return NextResponse.json({ error: "Dealer ID is required" }, { status: 400 });
+
+    await connectDB();
+    const body = await request.json();
 
     const updatedDealer = await Dealer.findByIdAndUpdate(id, body, { new: true, runValidators: true });
 
@@ -21,13 +22,13 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(request) {
   try {
-    await connectDB();
-    const { id } = params;
+    const id = request.url.split('/').pop();
 
     if (!id) return NextResponse.json({ error: "Dealer ID is required" }, { status: 400 });
 
+    await connectDB();
     const deletedDealer = await Dealer.findByIdAndDelete(id);
 
     if (!deletedDealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });

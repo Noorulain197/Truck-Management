@@ -8,9 +8,18 @@ export default function TrucksPage() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Filters & Sorting state
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [capacityMin, setCapacityMin] = useState("");
+  const [capacityMax, setCapacityMax] = useState("");
+  const [sortKey, setSortKey] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc"); // asc / desc
+
   // form modal state
   const [showForm, setShowForm] = useState(false);
-  const [editingTruck, setEditingTruck] = useState(null); // 🚀 null = add mode
+  const [editingTruck, setEditingTruck] = useState(null);
   const [form, setForm] = useState({
     number: "",
     model: "",
@@ -18,7 +27,6 @@ export default function TrucksPage() {
     currentMileage: "",
   });
 
-  // fetch trucks + trips
   useEffect(() => {
     fetchData();
   }, []);
@@ -29,12 +37,10 @@ export default function TrucksPage() {
         axios.get("/api/trucks"),
         axios.get("/api/trips"),
       ]);
-      // ✅ Safe array setting
       setTrucks(Array.isArray(truckRes.data) ? truckRes.data : []);
       setTrips(Array.isArray(tripRes.data) ? tripRes.data : []);
     } catch (err) {
       console.error("Error fetching trucks or trips:", err);
-      // ✅ Set empty arrays on error
       setTrucks([]);
       setTrips([]);
     } finally {
@@ -42,28 +48,36 @@ export default function TrucksPage() {
     }
   }
 
-  // truckwise income calc
+  // Truckwise income calculation with optional date filter
   function calculateIncome(truckId) {
     const truckTrips = trips.filter((t) => t.truck?._id === truckId);
-    return truckTrips.reduce((sum, t) => sum + (t.total_sale || 0), 0);
+    let filteredTrips = truckTrips;
+
+    if (dateFrom) {
+      filteredTrips = filteredTrips.filter((t) => new Date(t.date) >= new Date(dateFrom));
+    }
+    if (dateTo) {
+      filteredTrips = filteredTrips.filter((t) => new Date(t.date) <= new Date(dateTo));
+    }
+
+    return filteredTrips.reduce((sum, t) => sum + (t.total_sale || 0), 0);
   }
 
-  // add / update truck
+  // Add / Update truck
   async function handleSubmit(e) {
     e.preventDefault();
     try {
       if (editingTruck) {
-        // ✏️ Update
         const res = await axios.put(`/api/trucks/${editingTruck._id}`, form);
         setTrucks((prev) =>
-          Array.isArray(prev) ? prev.map((t) => (t._id === editingTruck._id ? res.data : t)) : []
+          Array.isArray(prev)
+            ? prev.map((t) => (t._id === editingTruck._id ? res.data : t))
+            : []
         );
       } else {
-        // ➕ Add new
         const res = await axios.post("/api/trucks", form);
         setTrucks((prev) => [...(Array.isArray(prev) ? prev : []), res.data]);
       }
-
       setForm({ number: "", model: "", capacity: "", currentMileage: "" });
       setEditingTruck(null);
       setShowForm(false);
@@ -72,18 +86,16 @@ export default function TrucksPage() {
     }
   }
 
-  // delete truck
   async function handleDelete(id) {
     if (!confirm("Are you sure you want to delete this truck?")) return;
     try {
       await axios.delete(`/api/trucks/${id}`);
-      setTrucks((prev) => Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []);
+      setTrucks((prev) => (Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []));
     } catch (err) {
       console.error("Error deleting truck:", err);
     }
   }
 
-  // open edit modal
   function handleEdit(truck) {
     setEditingTruck(truck);
     setForm({
@@ -95,6 +107,55 @@ export default function TrucksPage() {
     setShowForm(true);
   }
 
+  // Apply filters & sorting
+  function getFilteredTrucks() {
+    let filtered = [...trucks];
+
+    if (search) {
+      filtered = filtered.filter(
+        (t) =>
+          t.number?.toLowerCase().includes(search.toLowerCase()) ||
+          t.model?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (capacityMin) {
+      filtered = filtered.filter((t) => Number(t.capacity) >= Number(capacityMin));
+    }
+    if (capacityMax) {
+      filtered = filtered.filter((t) => Number(t.capacity) <= Number(capacityMax));
+    }
+
+    if (sortKey) {
+      filtered.sort((a, b) => {
+        let valA = a[sortKey];
+        let valB = b[sortKey];
+        if (sortKey === "truckwiseIncome") {
+          valA = calculateIncome(a._id);
+          valB = calculateIncome(b._id);
+        }
+        if (typeof valA === "string") valA = valA.toLowerCase();
+        if (typeof valB === "string") valB = valB.toLowerCase();
+
+        if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+        if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }
+
+  function resetFilters() {
+    setSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setCapacityMin("");
+    setCapacityMax("");
+    setSortKey("");
+    setSortOrder("asc");
+  }
+
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
@@ -104,7 +165,7 @@ export default function TrucksPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Trucks</h1>
           <p className="text-sm text-gray-500">
-            Manage trucks, their capacities, mileage, and income records.
+            Manage trucks, capacities, mileage, and truckwise income records.
           </p>
         </div>
 
@@ -120,7 +181,69 @@ export default function TrucksPage() {
         </button>
       </div>
 
-      {/* Table */}
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-end flex-wrap bg-white p-4 rounded-lg shadow border">
+        <input
+          type="text"
+          placeholder="Search by Number or Model"
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 outline-none flex-1"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Min Capacity"
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-28"
+          value={capacityMin}
+          onChange={(e) => setCapacityMin(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Max Capacity"
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-28"
+          value={capacityMax}
+          onChange={(e) => setCapacityMax(e.target.value)}
+        />
+        <input
+          type="date"
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-36"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+        />
+        <input
+          type="date"
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-36"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+        />
+        <select
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-40"
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value)}
+        >
+          <option value="">Sort By</option>
+          <option value="number">Truck Number</option>
+          <option value="model">Truck Model</option>
+          <option value="capacity">Capacity</option>
+          <option value="truckwiseIncome">Truckwise Income</option>
+        </select>
+        <select
+          className="border p-2 rounded-md focus:ring-2 focus:ring-blue-600 w-32"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+        >
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+        <button
+          className="px-3 py-2 bg-gray-300 hover:bg-gray-400 rounded-md text-sm"
+          onClick={resetFilters}
+        >
+          Reset
+        </button>
+      </div>
+
+      {/* Trucks Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border">
         <table className="min-w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
@@ -133,7 +256,7 @@ export default function TrucksPage() {
             </tr>
           </thead>
           <tbody>
-            {Array.isArray(trucks) && trucks.map((truck) => (
+            {getFilteredTrucks().map((truck) => (
               <tr key={truck._id} className="text-center hover:bg-gray-50 transition-all">
                 <td className="border p-2 text-left font-medium text-gray-800">{truck.number || "N/A"}</td>
                 <td className="border p-2 text-left text-gray-700">{truck.model || "N/A"}</td>
@@ -160,7 +283,7 @@ export default function TrucksPage() {
       </div>
 
       {/* No Data */}
-      {trucks.length === 0 && (
+      {getFilteredTrucks().length === 0 && (
         <div className="p-6 text-center text-gray-500">
           No truck records found
         </div>

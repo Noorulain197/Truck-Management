@@ -1,3 +1,4 @@
+// app/api/drivers/route.js
 import { NextResponse } from "next/server";
 import { connectDB } from "../../../lib/mongodb";
 import Driver from "../../../lib/models/Driver";
@@ -7,7 +8,16 @@ export async function GET() {
   try {
     await connectDB();
     const drivers = await Driver.find().lean();
-    return NextResponse.json({ success: true, data: drivers }, { status: 200 });
+
+    // Ensure every driver has _id and full_name
+    const safeDrivers = drivers.map(d => ({
+      _id: d._id?.toString() || "",
+      full_name: d.full_name || "Unnamed Driver",
+      phone: d.phone || "",
+      license_no: d.license_no || "",
+    }));
+
+    return NextResponse.json({ success: true, data: safeDrivers }, { status: 200 });
   } catch (err) {
     console.error("GET /api/drivers error:", err);
     return NextResponse.json(
@@ -23,7 +33,8 @@ export async function POST(req) {
     await connectDB();
     const body = await req.json();
 
-    if (!body.full_name || !body.phone || !body.license_no) {
+    // Basic validation
+    if (!body.full_name?.trim() || !body.phone?.trim() || !body.license_no?.trim()) {
       return NextResponse.json(
         {
           success: false,
@@ -33,7 +44,13 @@ export async function POST(req) {
       );
     }
 
-    const driver = await Driver.create(body);
+    // Create driver
+    const driver = await Driver.create({
+      full_name: body.full_name.trim(),
+      phone: body.phone.trim(),
+      license_no: body.license_no.trim(),
+    });
+
     return NextResponse.json(
       { success: true, message: "Driver created successfully", data: driver },
       { status: 201 }

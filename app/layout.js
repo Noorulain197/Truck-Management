@@ -26,7 +26,7 @@ export default function RootLayout({ children }) {
               <Link href="/drivers" className="hover:text-blue-500 transition-colors">Drivers</Link>
               <Link href="/trips" className="hover:text-blue-500 transition-colors">Trips</Link>
               <Link href="/trucks" className="hover:text-blue-500 transition-colors">Trucks</Link>
-              <Link href="/dealier" className="hover:text-blue-500 transition-colors">Dealer</Link>
+              <Link href="/dealers" className="hover:text-blue-500 transition-colors">Dealer</Link>
               {/* <Link href="/total" className="hover:text-blue-500 transition-colors">Total</Link> */}
 
             </nav>

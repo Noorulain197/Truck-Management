@@ -8,16 +8,14 @@ export default function TrucksPage() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters & Sorting state
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [capacityMin, setCapacityMin] = useState("");
   const [capacityMax, setCapacityMax] = useState("");
   const [sortKey, setSortKey] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc"); // asc / desc
+  const [sortOrder, setSortOrder] = useState("asc");
 
-  // form modal state
   const [showForm, setShowForm] = useState(false);
   const [editingTruck, setEditingTruck] = useState(null);
   const [form, setForm] = useState({
@@ -37,8 +35,10 @@ export default function TrucksPage() {
         axios.get("/api/trucks"),
         axios.get("/api/trips"),
       ]);
-      setTrucks(Array.isArray(truckRes.data) ? truckRes.data : []);
-      setTrips(Array.isArray(tripRes.data) ? tripRes.data : []);
+
+      // Ensure data is correctly read from backend response
+      setTrucks(Array.isArray(truckRes.data.data) ? truckRes.data.data : []);
+      setTrips(Array.isArray(tripRes.data.data) ? tripRes.data.data : []);
     } catch (err) {
       console.error("Error fetching trucks or trips:", err);
       setTrucks([]);
@@ -48,22 +48,13 @@ export default function TrucksPage() {
     }
   }
 
-  // Truckwise income calculation with optional date filter
   function calculateIncome(truckId) {
-    const truckTrips = trips.filter((t) => t.truck?._id === truckId);
-    let filteredTrips = truckTrips;
-
-    if (dateFrom) {
-      filteredTrips = filteredTrips.filter((t) => new Date(t.date) >= new Date(dateFrom));
-    }
-    if (dateTo) {
-      filteredTrips = filteredTrips.filter((t) => new Date(t.date) <= new Date(dateTo));
-    }
-
+    let filteredTrips = trips.filter((t) => t.truck?._id === truckId);
+    if (dateFrom) filteredTrips = filteredTrips.filter((t) => new Date(t.date) >= new Date(dateFrom));
+    if (dateTo) filteredTrips = filteredTrips.filter((t) => new Date(t.date) <= new Date(dateTo));
     return filteredTrips.reduce((sum, t) => sum + (t.total_sale || 0), 0);
   }
 
-  // Add / Update truck
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -71,13 +62,14 @@ export default function TrucksPage() {
         const res = await axios.put(`/api/trucks/${editingTruck._id}`, form);
         setTrucks((prev) =>
           Array.isArray(prev)
-            ? prev.map((t) => (t._id === editingTruck._id ? res.data : t))
+            ? prev.map((t) => (t._id === editingTruck._id ? res.data.data : t))
             : []
         );
       } else {
         const res = await axios.post("/api/trucks", form);
-        setTrucks((prev) => [...(Array.isArray(prev) ? prev : []), res.data]);
+        setTrucks((prev) => [...(Array.isArray(prev) ? prev : []), res.data.data]);
       }
+
       setForm({ number: "", model: "", capacity: "", currentMileage: "" });
       setEditingTruck(null);
       setShowForm(false);
@@ -86,15 +78,25 @@ export default function TrucksPage() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Are you sure you want to delete this truck?")) return;
-    try {
-      await axios.delete(`/api/trucks/${id}`);
-      setTrucks((prev) => (Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []));
-    } catch (err) {
-      console.error("Error deleting truck:", err);
-    }
+ async function handleDelete(id) {
+  if (!confirm("Are you sure you want to delete this truck?")) return;
+  console.log("Deleting truck ID:", id); // check value
+
+  try {
+    const res = await axios.delete(`/api/trucks/${id}`);
+    console.log("Delete response:", res.data);
+
+    setTrucks((prev) =>
+      Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []
+    );
+  } catch (err) {
+console.error(
+  "Error deleting truck:", 
+  err.response && err.response.data ? err.response.data : err.message
+);
   }
+}
+
 
   function handleEdit(truck) {
     setEditingTruck(truck);
@@ -107,7 +109,6 @@ export default function TrucksPage() {
     setShowForm(true);
   }
 
-  // Apply filters & sorting
   function getFilteredTrucks() {
     let filtered = [...trucks];
 
@@ -119,21 +120,13 @@ export default function TrucksPage() {
       );
     }
 
-    if (capacityMin) {
-      filtered = filtered.filter((t) => Number(t.capacity) >= Number(capacityMin));
-    }
-    if (capacityMax) {
-      filtered = filtered.filter((t) => Number(t.capacity) <= Number(capacityMax));
-    }
+    if (capacityMin) filtered = filtered.filter((t) => Number(t.capacity) >= Number(capacityMin));
+    if (capacityMax) filtered = filtered.filter((t) => Number(t.capacity) <= Number(capacityMax));
 
     if (sortKey) {
       filtered.sort((a, b) => {
-        let valA = a[sortKey];
-        let valB = b[sortKey];
-        if (sortKey === "truckwiseIncome") {
-          valA = calculateIncome(a._id);
-          valB = calculateIncome(b._id);
-        }
+        let valA = sortKey === "truckwiseIncome" ? calculateIncome(a._id) : a[sortKey];
+        let valB = sortKey === "truckwiseIncome" ? calculateIncome(b._id) : b[sortKey];
         if (typeof valA === "string") valA = valA.toLowerCase();
         if (typeof valB === "string") valB = valB.toLowerCase();
 
@@ -256,8 +249,11 @@ export default function TrucksPage() {
             </tr>
           </thead>
           <tbody>
-            {getFilteredTrucks().map((truck) => (
-              <tr key={truck._id} className="text-center hover:bg-gray-50 transition-all">
+            {getFilteredTrucks().map((truck, index) => (
+              <tr
+                key={truck._id || truck.number || index}
+                className="text-center hover:bg-gray-50 transition-all"
+              >
                 <td className="border p-2 text-left font-medium text-gray-800">{truck.number || "N/A"}</td>
                 <td className="border p-2 text-left text-gray-700">{truck.model || "N/A"}</td>
                 <td className="border p-2 text-gray-700">{truck.capacity || 0}</td>

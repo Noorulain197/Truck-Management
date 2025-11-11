@@ -27,7 +27,7 @@ export default function RootLayout({ children }) {
               <Link href="/trips" className="hover:text-blue-500 transition-colors">Trips</Link>
               <Link href="/trucks" className="hover:text-blue-500 transition-colors">Trucks</Link>
               <Link href="/dealers" className="hover:text-blue-500 transition-colors">Dealer</Link>
-              {/* <Link href="/total" className="hover:text-blue-500 transition-colors">Total</Link> */}
+              <Link href="/tyres" className="hover:text-blue-500 transition-colors">Tyres</Link>
 
             </nav>
 
@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
                 <Link href="/trips" className="py-2 px-2 rounded hover:bg-[var(--orange)] hover:text-white transition">Trips</Link>
                 <Link href="/trucks" className="py-2 px-2 rounded hover:bg-[var(--orange)] hover:text-white transition">Trucks</Link>
                 <Link href="/dealier" className="py-2 px-2 rounded hover:bg-[var(--orange)] hover:text-white transition">Dealer</Link>
-                {/* <Link href="/total" className="py-2 px-2 rounded hover:bg-[var(--orange)] hover:text-white transition">Total</Link> */}
+                <Link href="/tyres" className="hover:text-blue-500 transition-colors">Tyres</Link>
               </div>
             </div>
           )}

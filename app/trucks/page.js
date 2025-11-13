@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -25,6 +24,10 @@ export default function TrucksPage() {
     currentMileage: "",
   });
 
+  // ✅ Mileage Prompt States
+  const [showMileagePrompt, setShowMileagePrompt] = useState(false);
+  const [selectedTruck, setSelectedTruck] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -36,7 +39,6 @@ export default function TrucksPage() {
         axios.get("/api/trips"),
       ]);
 
-      // Ensure data is correctly read from backend response
       setTrucks(Array.isArray(truckRes.data.data) ? truckRes.data.data : []);
       setTrips(Array.isArray(tripRes.data.data) ? tripRes.data.data : []);
     } catch (err) {
@@ -48,10 +50,30 @@ export default function TrucksPage() {
     }
   }
 
+  // ✅ Mileage Limit Check
+  useEffect(() => {
+    const overLimitTruck = trucks.find(
+      (t) =>
+        t.currentMileage >= 4000 &&
+        !localStorage.getItem(`mileagePrompt_${t._id}`)
+    );
+
+    if (overLimitTruck) {
+      setSelectedTruck(overLimitTruck);
+      setShowMileagePrompt(true);
+    }
+  }, [trucks]);
+
   function calculateIncome(truckId) {
     let filteredTrips = trips.filter((t) => t.truck?._id === truckId);
-    if (dateFrom) filteredTrips = filteredTrips.filter((t) => new Date(t.date) >= new Date(dateFrom));
-    if (dateTo) filteredTrips = filteredTrips.filter((t) => new Date(t.date) <= new Date(dateTo));
+    if (dateFrom)
+      filteredTrips = filteredTrips.filter(
+        (t) => new Date(t.date) >= new Date(dateFrom)
+      );
+    if (dateTo)
+      filteredTrips = filteredTrips.filter(
+        (t) => new Date(t.date) <= new Date(dateTo)
+      );
     return filteredTrips.reduce((sum, t) => sum + (t.total_sale || 0), 0);
   }
 
@@ -62,12 +84,17 @@ export default function TrucksPage() {
         const res = await axios.put(`/api/trucks/${editingTruck._id}`, form);
         setTrucks((prev) =>
           Array.isArray(prev)
-            ? prev.map((t) => (t._id === editingTruck._id ? res.data.data : t))
+            ? prev.map((t) =>
+                t._id === editingTruck._id ? res.data.data : t
+              )
             : []
         );
       } else {
         const res = await axios.post("/api/trucks", form);
-        setTrucks((prev) => [...(Array.isArray(prev) ? prev : []), res.data.data]);
+        setTrucks((prev) => [
+          ...(Array.isArray(prev) ? prev : []),
+          res.data.data,
+        ]);
       }
 
       setForm({ number: "", model: "", capacity: "", currentMileage: "" });
@@ -78,25 +105,21 @@ export default function TrucksPage() {
     }
   }
 
- async function handleDelete(id) {
-  if (!confirm("Are you sure you want to delete this truck?")) return;
-  console.log("Deleting truck ID:", id); // check value
+  async function handleDelete(id) {
+    if (!confirm("Are you sure you want to delete this truck?")) return;
 
-  try {
-    const res = await axios.delete(`/api/trucks/${id}`);
-    console.log("Delete response:", res.data);
-
-    setTrucks((prev) =>
-      Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []
-    );
-  } catch (err) {
-console.error(
-  "Error deleting truck:", 
-  err.response && err.response.data ? err.response.data : err.message
-);
+    try {
+      const res = await axios.delete(`/api/trucks/${id}`);
+      setTrucks((prev) =>
+        Array.isArray(prev) ? prev.filter((t) => t._id !== id) : []
+      );
+    } catch (err) {
+      console.error(
+        "Error deleting truck:",
+        err.response && err.response.data ? err.response.data : err.message
+      );
+    }
   }
-}
-
 
   function handleEdit(truck) {
     setEditingTruck(truck);
@@ -120,13 +143,21 @@ console.error(
       );
     }
 
-    if (capacityMin) filtered = filtered.filter((t) => Number(t.capacity) >= Number(capacityMin));
-    if (capacityMax) filtered = filtered.filter((t) => Number(t.capacity) <= Number(capacityMax));
+    if (capacityMin)
+      filtered = filtered.filter(
+        (t) => Number(t.capacity) >= Number(capacityMin)
+      );
+    if (capacityMax)
+      filtered = filtered.filter(
+        (t) => Number(t.capacity) <= Number(capacityMax)
+      );
 
     if (sortKey) {
       filtered.sort((a, b) => {
-        let valA = sortKey === "truckwiseIncome" ? calculateIncome(a._id) : a[sortKey];
-        let valB = sortKey === "truckwiseIncome" ? calculateIncome(b._id) : b[sortKey];
+        let valA =
+          sortKey === "truckwiseIncome" ? calculateIncome(a._id) : a[sortKey];
+        let valB =
+          sortKey === "truckwiseIncome" ? calculateIncome(b._id) : b[sortKey];
         if (typeof valA === "string") valA = valA.toLowerCase();
         if (typeof valB === "string") valB = valB.toLowerCase();
 
@@ -149,6 +180,44 @@ console.error(
     setSortOrder("asc");
   }
 
+  // ✅ Handle Save and Clear Mileage
+  async function handleSaveMileage() {
+    if (!selectedTruck) return;
+
+    try {
+      await axios.put(`/api/trucks/${selectedTruck._id}`, {
+        ...selectedTruck,
+        currentMileage: selectedTruck.currentMileage,
+      });
+      localStorage.setItem(`mileagePrompt_${selectedTruck._id}`, "saved");
+      setShowMileagePrompt(false);
+      setSelectedTruck(null);
+    } catch (err) {
+      console.error("Error saving mileage:", err);
+    }
+  }
+
+  async function handleClearMileage() {
+    if (!selectedTruck) return;
+
+    try {
+      await axios.put(`/api/trucks/${selectedTruck._id}`, {
+        ...selectedTruck,
+        currentMileage: 0,
+      });
+      localStorage.removeItem(`mileagePrompt_${selectedTruck._id}`);
+      setTrucks((prev) =>
+        prev.map((t) =>
+          t._id === selectedTruck._id ? { ...t, currentMileage: 0 } : t
+        )
+      );
+      setShowMileagePrompt(false);
+      setSelectedTruck(null);
+    } catch (err) {
+      console.error("Error clearing mileage:", err);
+    }
+  }
+
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
@@ -156,7 +225,9 @@ console.error(
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Trucks</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Trucks
+          </h1>
           <p className="text-sm text-gray-500">
             Manage trucks, capacities, mileage, and truckwise income records.
           </p>
@@ -165,7 +236,12 @@ console.error(
         <button
           onClick={() => {
             setEditingTruck(null);
-            setForm({ number: "", model: "", capacity: "", currentMileage: "" });
+            setForm({
+              number: "",
+              model: "",
+              capacity: "",
+              currentMileage: "",
+            });
             setShowForm(true);
           }}
           className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm rounded-md transition-all"
@@ -244,6 +320,7 @@ console.error(
               <th className="border p-2 text-left">Truck Number</th>
               <th className="border p-2 text-left">Truck Model</th>
               <th className="border p-2 text-center">Capacity</th>
+              <th className="border p-2 text-center">Mileage</th>
               <th className="border p-2 text-center">Truckwise Income</th>
               <th className="border p-2 text-center">Actions</th>
             </tr>
@@ -254,10 +331,21 @@ console.error(
                 key={truck._id || truck.number || index}
                 className="text-center hover:bg-gray-50 transition-all"
               >
-                <td className="border p-2 text-left font-medium text-gray-800">{truck.number || "N/A"}</td>
-                <td className="border p-2 text-left text-gray-700">{truck.model || "N/A"}</td>
-                <td className="border p-2 text-gray-700">{truck.capacity || 0}</td>
-                <td className="border p-2 text-gray-700">{calculateIncome(truck._id)}</td>
+                <td className="border p-2 text-left font-medium text-gray-800">
+                  {truck.number || "N/A"}
+                </td>
+                <td className="border p-2 text-left text-gray-700">
+                  {truck.model || "N/A"}
+                </td>
+                <td className="border p-2 text-gray-700">
+                  {truck.capacity || 0}
+                </td>
+                <td className="border p-2 text-gray-700">
+                  {truck.currentMileage || 0}
+                </td>
+                <td className="border p-2 text-gray-700">
+                  {calculateIncome(truck._id)}
+                </td>
                 <td className="border p-2 flex justify-center gap-2">
                   <button
                     onClick={() => handleEdit(truck)}
@@ -278,14 +366,13 @@ console.error(
         </table>
       </div>
 
-      {/* No Data */}
       {getFilteredTrucks().length === 0 && (
         <div className="p-6 text-center text-gray-500">
           No truck records found
         </div>
       )}
 
-      {/* Modal */}
+      {/* Truck Add/Edit Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 border">
@@ -295,7 +382,9 @@ console.error(
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Truck Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Truck Number
+                </label>
                 <input
                   type="text"
                   required
@@ -307,7 +396,9 @@ console.error(
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Model
+                </label>
                 <input
                   type="text"
                   required
@@ -319,22 +410,30 @@ console.error(
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity (tons)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Capacity (tons)
+                </label>
                 <input
                   type="number"
                   value={form.capacity || ""}
-                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, capacity: e.target.value })
+                  }
                   className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-700"
                   placeholder="e.g., 20"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Mileage (km)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Mileage (km)
+                </label>
                 <input
                   type="number"
                   value={form.currentMileage || ""}
-                  onChange={(e) => setForm({ ...form, currentMileage: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, currentMileage: e.target.value })
+                  }
                   className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-700"
                   placeholder="e.g., 40000"
                 />
@@ -356,6 +455,37 @@ console.error(
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Mileage Limit Prompt */}
+      {showMileagePrompt && selectedTruck && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center shadow-xl border">
+            <h2 className="text-lg font-bold text-red-600 mb-3">
+              ⚠️ Mileage Limit Exceeded
+            </h2>
+            <p className="text-gray-700 mb-5">
+              Truck{" "}
+              <span className="font-semibold">{selectedTruck.number}</span> has
+              crossed the 4000 km limit.
+            </p>
+
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleSaveMileage}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+              >
+                Save Mileage
+              </button>
+              <button
+                onClick={handleClearMileage}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+              >
+                Clear Mileage
+              </button>
+            </div>
           </div>
         </div>
       )}
